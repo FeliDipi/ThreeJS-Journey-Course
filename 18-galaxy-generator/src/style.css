@@ -43,9 +43,9 @@ canvas {
 
   font-size: 36px;
 
-  text-shadow: #1b3984 0 0 10px;
-
   width: 50%;
+
+  animation: textAnimation 10s infinite alternate;
 }
 
 .subtitle {
@@ -58,5 +58,15 @@ canvas {
 
   line-height: 1.25;
 
-  text-shadow: #1b3984 0 0 10px;
+  animation: textAnimation 10s infinite alternate;
+}
+
+@keyframes textAnimation {
+  0% {
+    text-shadow: #1b3984 0 0 10px;
+  }
+
+  100% {
+    text-shadow: #ff6030 0 0 15px;
+  }
 }
