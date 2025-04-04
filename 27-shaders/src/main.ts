@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
-import fragment from "./shaders/fragment.glsl?raw";
-import vertex from "./shaders/vertex.glsl?raw";
+import fragment from "./shaders/rigging_sea/fragment.glsl?raw";
+import vertex from "./shaders/rigging_sea/vertex.glsl?raw";
 
 const gui = new GUI({ width: 360 });
 
@@ -29,7 +29,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-camera.position.set(0, 4, 3);
+camera.position.set(0, 2, 2);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(sizes.width, sizes.height);
@@ -39,19 +39,22 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 
-const parameters = {};
+const uniformsWave = {
+  uTime: { value: 0 },
+  uFrecuency: { value: 5.0 },
+  uAmplitude: { value: 0.05 },
+  uDepthColor: { value: new THREE.Color("#66b0ff") },
+  uSurfaceColor: { value: new THREE.Color("#FFFFFF") },
+};
 
 const material = new THREE.RawShaderMaterial({
   vertexShader: vertex,
   fragmentShader: fragment,
-  uniforms: {
-    uTime: {
-      value: 0,
-    },
-  },
+  uniforms: uniformsWave,
+  side: THREE.DoubleSide,
 });
 
-const geometry = new THREE.PlaneGeometry(1, 1, 32, 32);
+const geometry = new THREE.PlaneGeometry(2, 2, 512, 512);
 const count = geometry.attributes.position.count;
 const randoms = new Float32Array(count);
 
@@ -59,11 +62,29 @@ for (let i = 0; i < count; i++) {
   randoms[i] = Math.random();
 }
 
-geometry.setAttribute("aRandom", new THREE.BufferAttribute(randoms, 1));
-
 const plane = new THREE.Mesh(geometry, material);
+plane.rotation.x = -Math.PI / 2;
 
 scene.add(plane);
+
+gui.add(material.uniforms.uFrecuency, "value", 0, 100, 0.1).name("uFrecuency");
+gui.add(material.uniforms.uAmplitude, "value", 0, 1, 0.01).name("uAmplitude");
+gui
+  .addColor(material.uniforms.uDepthColor, "value")
+  .name("uDepthColor")
+  .onChange(() => {
+    material.uniforms.uDepthColor.value.set(
+      material.uniforms.uDepthColor.value
+    );
+  });
+gui
+  .addColor(material.uniforms.uSurfaceColor, "value")
+  .name("uSurfaceColor")
+  .onChange(() => {
+    material.uniforms.uSurfaceColor.value.set(
+      material.uniforms.uSurfaceColor.value
+    );
+  });
 
 const clock = new THREE.Clock();
 
@@ -73,7 +94,9 @@ function tick() {
 
   const elapsedTime = clock.getElapsedTime();
 
-  material.uniforms.uTime.value = elapsedTime;
+  if (material.uniforms.uTime) {
+    material.uniforms.uTime.value = elapsedTime;
+  }
 
   window.requestAnimationFrame(tick);
 }
