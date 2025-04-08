@@ -61,11 +61,19 @@ const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 gltfLoader.setMeshoptDecoder(MeshoptDecoder);
 
-const model = await gltfLoader.loadAsync(modelPath);
+const glb = await gltfLoader.loadAsync(modelPath);
 
 const baseGeometry: any = {};
-baseGeometry.instance = model.scene.children[0].geometry;
+baseGeometry.instance = glb.scene.children[0].geometry;
 baseGeometry.count = baseGeometry.instance.attributes.position.count;
+
+const model = {};
+model.instance = new THREE.Mesh(
+  baseGeometry.instance,
+  new THREE.MeshBasicMaterial({ color: "#6F7C36", side: THREE.DoubleSide })
+);
+
+scene.add(model.instance);
 
 const gpgpu: any = {};
 gpgpu.size = Math.ceil(Math.sqrt(baseGeometry.count));
@@ -106,6 +114,7 @@ gpgpu.debug = new THREE.Mesh(
   new THREE.MeshBasicMaterial({
     map: gpgpu.computation.getCurrentRenderTarget(gpgpu.particlesVariable)
       .texture,
+    side: THREE.DoubleSide,
   })
 );
 gpgpu.debug.position.set(0, 0, -1);
@@ -132,6 +141,9 @@ for (let y = 0; y < gpgpu.size; y++) {
   }
 }
 
+const textureLoader = new THREE.TextureLoader();
+const particleTexture = textureLoader.load("textures/grass.png");
+
 particles.geometry = new THREE.BufferGeometry();
 particles.geometry.setDrawRange(0, baseGeometry.count);
 particles.geometry.setAttribute(
@@ -144,7 +156,8 @@ particles.geometry.setAttribute(
 );
 
 particles.uniforms = {
-  uSize: new THREE.Uniform(0.05),
+  uTime: new THREE.Uniform(0.0),
+  uSize: new THREE.Uniform(0.15),
   uResolution: new THREE.Uniform(
     new THREE.Vector2(
       sizes.width * sizes.pixelRatio,
@@ -152,6 +165,7 @@ particles.uniforms = {
     )
   ),
   uParticlesTexture: new THREE.Uniform(),
+  uTexture: new THREE.Uniform(particleTexture),
 };
 
 particles.material = new THREE.RawShaderMaterial({
@@ -184,10 +198,18 @@ gui
   )
   .name("resY");
 
+const clock = new THREE.Clock();
+
 function tick() {
   controls.update();
 
   gpgpu.computation.compute();
+
+  const elapsedTime = clock.getElapsedTime();
+
+  if (particles.material.uniforms.uTime) {
+    particles.material.uniforms.uTime.value = elapsedTime;
+  }
 
   particles.material.uniforms.uParticlesTexture.value =
     gpgpu.computation.getCurrentRenderTarget(gpgpu.particlesVariable).texture;
